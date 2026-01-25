@@ -3,13 +3,8 @@ package co.com.activos.replicador_documental.infrastructure.adapters.oracle.taxo
 import co.com.activos.replicador_documental.domain.model.ParamRepository;
 import co.com.activos.replicador_documental.domain.model.TaxonomiaParam;
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Repository
@@ -18,43 +13,43 @@ public class AdapterTaxonomiaRepository implements ParamRepository {
 
     private final TaxonomiaParamRepository repository;
 
-
     @Override
     public List<TaxonomiaParam> listarPorTipoFlujo(Long txpCodigo) {
-
-//        int pageSize = 1000;
-//        int pageNumber = 0;
-//        boolean ultimaPagina = false;
-
-        /*
-        List<TaxonomiaParam> resultado = new ArrayList<>();
-
-        while (!ultimaPagina) {
-            Pageable pageable = PageRequest.of(pageNumber, pageSize);
-            Page<TaxonomiaParamData> page = repository.findByCodigoRef(txpCodigo, pageable);
-
-            resultado.addAll(
-                    page.getContent().stream()
-                            .map(this::toDomain)
-                            .toList()
-            );
-
-            ultimaPagina = page.isLast();
-            pageNumber++;
-        }
-
-        return resultado;
-
-         */
-
-        return repository.listarPorTipoFlujo(txpCodigo)
+        // Cargar todo (método original)
+        return repository.buscarPorTipoFlujoOptimizado(txpCodigo)
                 .stream()
                 .map(this::toDomain)
                 .toList();
-
+    }
+    
+    @Override
+    public List<TaxonomiaParam> listarPorTipoFlujo(Long txpCodigo, int pageNumber, int pageSize) {
+        // Método paginado para evitar connection leaks
+        return repository.buscarPorTipoFlujoPaginado(txpCodigo, pageNumber * pageSize, pageSize)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+    
+    @Override
+    public List<TaxonomiaParam> listarPorTipoFlujoYAnio(Long txpCodigo, int anio) {
+        // Migración por año - método optimizado
+        return repository.buscarPorTipoFlujoYAnio(txpCodigo, anio)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+    
+    @Override
+    public List<TaxonomiaParam> listarPorTipoFlujoYAnio(Long txpCodigo, int anio, int pageNumber, int pageSize) {
+        // Migración por año paginado
+        return repository.buscarPorTipoFlujoYAnioPaginado(txpCodigo, anio, pageNumber * pageSize, pageSize)
+                .stream()
+                .map(this::toDomain)
+                .toList();
     }
 
-    public TaxonomiaParam toDomain(TaxonomiaParamData data) {
+    private TaxonomiaParam toDomain(TaxonomiaParamData data) {
         return TaxonomiaParam.builder()
                 .codigo(data.getCodigo())
                 .codigoRef(data.getCodigoRef())
