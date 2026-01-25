@@ -1,44 +1,36 @@
-# Use Eclipse Temurin OpenJDK 17 as base image
-FROM eclipse-temurin:17-jdk-alpine
+# Etapa de construcción: usa Maven y JDK 17
+FROM maven:3.8.4-openjdk-17-slim AS dockerbuild
 
-# Crear el grupo y usuario
-RUN addgroup -S devopsc && adduser -S javams -G devopsc
-
-# Crear y asignar permisos al directorio
-RUN mkdir -p /opt/app/config && chmod -R 755 /opt/app/config
-
-# Set working directory
+# Define directorio de trabajo
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
+# Copia todo el proyecto al contenedor
+COPY . .
 
-# Make Maven wrapper executable
-RUN chmod +x ./mvnw
+# Compila y empaqueta el JAR, omitiendo tests
+RUN mvn clean package -DskipTests
 
-# Download dependencies
-RUN ./mvnw dependency:go-offline -B
+# Etapa de ejecución: usa Eclipse Temurin JDK 17
+FROM eclipse-temurin:17-jdk
 
-# Copy source code
-COPY src ./src
+# Establece la zona horaria reconocida por Oracle
+ENV TZ=America/Bogota
 
-# Build the application
-RUN ./mvnw clean package -DskipTests
+RUN apt-get update && \
+    apt-get install -y tzdata && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo "$TZ" > /etc/timezone && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Copiar el JAR al directorio de la aplicación
-COPY target/replicador-documental-0.0.1-SNAPSHOT.jar /opt/app/app.jar
+# Define directorio de trabajo
+WORKDIR /app
 
-# Cambiar al usuario sin privilegios
-USER javams:devopsc
+# Copia el .jar desde la etapa de construcción
+COPY --from=dockerbuild /app/target/*.jar app.jar
 
-# Definir variables de entorno y volumen
-ENV JAVA_OPTS=""
-VOLUME /tmp
-
-# Exponer el puerto
+# Expone el puerto de tu aplicación
 EXPOSE 8080
 
-# Comando para ejecutar la aplicación
-ENTRYPOINT [ "sh", "-c", "java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar /opt/app/app.jar " ]
+# Ejecuta la aplicación
+ENTRYPOINT ["java", "-jar", "app.jar"]
