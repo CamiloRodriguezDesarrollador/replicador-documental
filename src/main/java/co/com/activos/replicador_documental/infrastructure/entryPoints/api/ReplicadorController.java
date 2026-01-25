@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.concurrent.CompletableFuture;
+
 @RestController
 @RequestMapping("/replicar")
 @AllArgsConstructor
@@ -40,17 +42,21 @@ class ReplicadorController {
                     .body("Error al replicar carpetas: " + e.getMessage());
         }
     }
-    
+
+
     @GetMapping("/bhv/{txpCodigo}/anio/{anio}")
-    public ResponseEntity<String> replicarBhvPorAnio(@PathVariable Long txpCodigo, @PathVariable int anio) {
-        try {
-            String resultado = replicarUseCase.ejecutarPorAnio(txpCodigo, anio);
-            return ResponseEntity.ok(resultado);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body("Error al replicar carpetas del año " + anio + ": " + e.getMessage());
-        }
+    public CompletableFuture<ResponseEntity<String>> replicarBhvPorAnio(@PathVariable Long txpCodigo, @PathVariable int anio) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String resultado = replicarUseCase.ejecutarPorAnio(txpCodigo, anio);
+                return ResponseEntity.ok(resultado);
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError()
+                        .body("Error al replicar carpetas del año " + anio + ": " + e.getMessage());
+            }
+        });
     }
+
 
     @GetMapping("/solicitar/{id}")
     public ResponseEntity<SolicitarArchivoResponse> solicitarArchivo(@PathVariable String id) {
@@ -75,14 +81,14 @@ class ReplicadorController {
             }
 
             ObjectMapper mapper = new ObjectMapper();
-            DocumentRegistrationRequest.DocumentParams params = 
+            DocumentRegistrationRequest.DocumentParams params =
                     mapper.readValue(paramsJson, DocumentRegistrationRequest.DocumentParams.class);
-            
+
             DocumentRegistrationRequest request = new DocumentRegistrationRequest(documentId, file, params);
             DocumentRegistrationResponse response = documentRegistrationClient.registerDocument(request);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (JsonProcessingException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
