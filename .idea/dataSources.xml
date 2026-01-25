@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="jdbc:oracle:thin:@//192.168.21.222:1521/ACTIV [DEBUG]" group="​ReplicadorDocumentalApplication" uuid="65ece35a-33b0-478e-8967-10b1dc575461">
+      <driver-ref>oracle.19</driver-ref>
+      <synchronize>true</synchronize>
+      <imported>true</imported>
+      <auto-commit>false</auto-commit>
+      <jdbc-driver>oracle.jdbc.OracleDriver</jdbc-driver>
+      <jdbc-url>jdbc:oracle:thin:@//192.168.21.222:1521/ACTIV</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+  </component>
+</project>
