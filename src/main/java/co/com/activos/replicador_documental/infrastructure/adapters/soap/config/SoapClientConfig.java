@@ -13,6 +13,8 @@ import org.springframework.ws.client.core.WebServiceTemplate;
 import org.springframework.ws.transport.http.HttpComponents5MessageSender;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Configuración optimizada del cliente SOAP para alta concurrencia y timeouts
@@ -37,26 +39,19 @@ public class SoapClientConfig {
 
     @Bean
     public Jaxb2Marshaller marshaller() {
-        Jaxb2Marshaller m = new Jaxb2Marshaller();
-        m.setClassesToBeBound(
-                co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoRequest.class,
-                co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoResponse.class
-        );
-        return m;
+        Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
+        // Asegúrate de que este paquete solo tenga las clases de AZDigital
+        marshaller.setPackagesToScan("co.com.activos.replicador_documental.infrastructure.adapters.soap.model");
+        return marshaller;
     }
 
     @Bean
-    public WebServiceTemplate webServiceTemplate(Jaxb2Marshaller marshaller) {
-        WebServiceTemplate wst = new WebServiceTemplate();
-        wst.setMarshaller(marshaller);
-        wst.setUnmarshaller(marshaller);
-        wst.setDefaultUri(defaultUri);
-        wst.setMessageSender(httpComponentsMessageSender());
-        
-        // WebServiceTemplate no tiene setSendTimeout/setReceiveTimeout
-        // Los timeouts se configuran a nivel de MessageSender
-        
-        return wst;
+    public WebServiceTemplate webServiceTemplate(Jaxb2Marshaller marshaller, HttpComponents5MessageSender messageSender) {
+        WebServiceTemplate template = new WebServiceTemplate();
+        template.setMarshaller(marshaller);
+        template.setUnmarshaller(marshaller);
+        template.setMessageSender(messageSender);
+        return template;
     }
 
     @Bean

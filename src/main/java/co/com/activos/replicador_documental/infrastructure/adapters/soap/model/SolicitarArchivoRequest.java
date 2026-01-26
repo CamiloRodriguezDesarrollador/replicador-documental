@@ -10,11 +10,15 @@ import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
 
 
+import jakarta.xml.bind.annotation.*;
+import lombok.*;
+
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlRootElement(name = "ReqSolicitarArchivo", namespace = "http://tempuri.org/solicitar_archivo_ms")
+@XmlRootElement(name = "SolicitarArchivo", namespace = "http://www.analitica.com.co/AZDigital/xsds/")
 public class SolicitarArchivoRequest {
-    @XmlElement(name = "id", namespace = "http://tempuri.org/solicitar_archivo_ms")
-    private String id;
+
+    @XmlElement(name = "Id", namespace = "http://www.analitica.com.co/AZDigital/xsds/")
+    private String id; // El ID del documento en AZDigital
 }
 

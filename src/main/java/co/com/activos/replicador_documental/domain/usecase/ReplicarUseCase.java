@@ -327,7 +327,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
 
         return new DocumentRegistrationRequest(
                 azDigital.getPrdCodigo(),
-                base64ToMultipart(archivoResponse.getArchivo(), archivoResponse.getNombre(), archivoResponse.getTipoMime()),
+                base64ToMultipart( archivoResponse.getArchivo().getContenido(), archivoResponse.getArchivo().getNombre(), archivoResponse.getArchivo().getContenido()),
                 extraerTipoYNumeroDocumento(param.getNombre()));
     }
 
