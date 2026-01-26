@@ -47,15 +47,17 @@ public class SoapClientAdapterImpl extends WebServiceGatewaySupport  implements 
         log.info("Descargando documento ID: {} de AZDigital", solicitarArchivoRequest.getId());
 
         try {
+            String fullEndpoint = endpoint + "SolicitarArchivo";
             return (SolicitarArchivoResponse) getWebServiceTemplate()
-                    .marshalSendAndReceive(endpoint, request, new SoapActionCallback(SOAP_ACTION) {
+                    .marshalSendAndReceive(fullEndpoint, request, new SoapActionCallback(SOAP_ACTION) {
                         @Override
                         public void doWithMessage(WebServiceMessage message) throws IOException {
                             super.doWithMessage(message);
                             // Add custom namespaces if needed
                             if (message instanceof SoapMessage) {
                                 SoapMessage soapMessage = (SoapMessage) message;
-                                // Add any additional namespace declarations here if needed
+                                // Add az namespace to match WSDL expectations
+                                soapMessage.getSoapHeader().addNamespaceDeclaration("az", "http://www.analitica.com.co/AZDigital/xsds/");
                             }
                         }
                     });
