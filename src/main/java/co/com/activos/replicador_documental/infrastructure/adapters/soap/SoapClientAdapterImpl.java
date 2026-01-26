@@ -7,8 +7,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.stereotype.Component;
+import org.springframework.ws.WebServiceMessage;
 import org.springframework.ws.client.core.support.WebServiceGatewaySupport;
+import org.springframework.ws.soap.SoapMessage;
 import org.springframework.ws.soap.client.core.SoapActionCallback;
+
+import java.io.IOException;
+import javax.xml.transform.TransformerException;
 
 @Component
 @Slf4j
@@ -43,7 +48,17 @@ public class SoapClientAdapterImpl extends WebServiceGatewaySupport  implements 
 
         try {
             return (SolicitarArchivoResponse) getWebServiceTemplate()
-                    .marshalSendAndReceive(endpoint, request, new SoapActionCallback(SOAP_ACTION));
+                    .marshalSendAndReceive(endpoint, request, new SoapActionCallback(SOAP_ACTION) {
+                        @Override
+                        public void doWithMessage(WebServiceMessage message) throws IOException {
+                            super.doWithMessage(message);
+                            // Add custom namespaces if needed
+                            if (message instanceof SoapMessage) {
+                                SoapMessage soapMessage = (SoapMessage) message;
+                                // Add any additional namespace declarations here if needed
+                            }
+                        }
+                    });
         } catch (Exception e) {
             log.error("Error al obtener documento {}: {}", solicitarArchivoRequest.getId(), e.getMessage());
             throw e;
