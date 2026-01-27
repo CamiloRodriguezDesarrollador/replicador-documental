@@ -83,7 +83,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                             .map(param -> CompletableFuture.runAsync(() -> {
                                 try {
                                     procesarCarpeta(param, txpCodigoStr, executionId, 
-                                            totalDocumentos, documentosMigrados, documentosFallidos);
+                                            totalDocumentos, totalCarpetas, documentosMigrados, documentosFallidos);
                                 } catch (Exception e) {
                                     log.error("Error carpeta {}: {}", param.getCodigo(), e.getMessage());
                                 }
@@ -175,7 +175,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                             .map(param -> CompletableFuture.runAsync(() -> {
                                 try {
                                     procesarCarpeta(param, txpCodigoStr, executionId, 
-                                            totalDocumentos, documentosMigrados, documentosFallidos);
+                                            totalDocumentos, totalCarpetas, documentosMigrados, documentosFallidos);
                                 } catch (Exception e) {
                                     log.error("Error carpeta {}: {}", param.getCodigo(), e.getMessage());
                                 }
@@ -233,7 +233,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
     // Método de conteo eliminado - ahora el total se va descubriendo gradualmente durante el procesamiento
     
     private void procesarCarpeta(TaxonomiaParam param, String txpCodigoStr, long executionId,
-                                AtomicLong totalDocumentos, AtomicLong documentosMigrados, AtomicLong documentosFallidos) throws InterruptedException {
+                                AtomicLong totalDocumentos, AtomicLong totalCarpetas, AtomicLong documentosMigrados, AtomicLong documentosFallidos) throws InterruptedException {
         
         // Extraer todos los códigos de cliente de esta carpeta
         List<String> codigosCliente = new ArrayList<>();
