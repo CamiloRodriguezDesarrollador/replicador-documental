@@ -44,7 +44,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
 
     private static final int BATCH_SIZE = 100; // Batch más pequeño para mejor control
     private static final int PARALLEL_THREADS = 8; // Reducido para evitar thread starvation
-    private static final int MAX_PAGES = 2000; // Límite para manejar hasta 100,000 carpetas (50 x 2000)
+    private static final int MAX_PAGES = 2000000; // Límite para manejar hasta 100,000 carpetas (50 x 2000)
 
     @Override
     public String ejecutar(Long txpCodigo) {
