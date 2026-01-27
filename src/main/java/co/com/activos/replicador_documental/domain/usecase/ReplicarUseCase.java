@@ -8,7 +8,7 @@ import co.com.activos.replicador_documental.infrastructure.adapters.soap.BatchSo
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.SoapClientManualImpl;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoResponse;
 import com.activos.gcp.pubsub.annotation.Listener;
-import co.com.activos.replicador_documental.infrastructure.adapters.pubsub.model.MigrationMessage;
+import co.com.activos.replicador_documental.domain.model.MigrationMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

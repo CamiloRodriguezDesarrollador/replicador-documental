@@ -11,7 +11,7 @@ import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.S
 import com.activos.gcp.pubsub.service.PubSubService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import co.com.activos.replicador_documental.infrastructure.adapters.pubsub.model.MigrationMessage;
+import co.com.activos.replicador_documental.domain.model.MigrationMessage;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
