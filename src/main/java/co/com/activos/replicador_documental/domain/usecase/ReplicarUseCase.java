@@ -42,8 +42,8 @@ public class ReplicarUseCase implements UseCase<Long, String> {
     private final DocumentRegistrationClient documentRegistrationClient;
     private final ObjectMapper objectMapper;
 
-    private static final int BATCH_SIZE = 100; // Batch más pequeño para mejor control
-    private static final int PARALLEL_THREADS = 8; // Reducido para evitar thread starvation
+    private static final int BATCH_SIZE = 200; // Batch más grande para mayor rendimiento
+    private static final int PARALLEL_THREADS = 16; // Duplicado para máximo paralelismo
     private static final int MAX_PAGES = 2000000; // Límite para manejar hasta 100,000 carpetas (50 x 2000)
 
     @Override
@@ -183,8 +183,8 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         survivalLogger.start();
         
         try {
-            // Procesar parámetros por páginas más pequeñas para mejor distribución
-            int pageSize = 50; // Página más pequeña para mejor paralelismo
+            // Procesar parámetros por páginas más grandes para mayor rendimiento
+            int pageSize = 100; // Página más grande para menos queries a BD
             int pageNumber = 0;
             
             while (pageNumber < MAX_PAGES) {
