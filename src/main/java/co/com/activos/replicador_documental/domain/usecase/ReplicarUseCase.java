@@ -7,7 +7,6 @@ import co.com.activos.replicador_documental.infrastructure.adapters.rest.model.D
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.BatchSoapClientAdapter;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.SoapClientManualImpl;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoResponse;
-import com.activos.gcp.pubsub.annotation.Listener;
 import co.com.activos.replicador_documental.domain.model.MigrationMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -141,12 +140,12 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                 totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get());
     }
 
-
-    @Listener("migration_sb")
+    
     public String ejecutarPorAnio(String payload) {
         try {
-            // Deserializar el mensaje JSON
-            MigrationMessage message = objectMapper.readValue(payload, MigrationMessage.class);
+            // Limpiar y deserializar el mensaje JSON
+            String cleanPayload = payload.replaceFirst("^\"|\"$", ""); // Remover comillas externas
+            MigrationMessage message = objectMapper.readValue(cleanPayload, MigrationMessage.class);
             
             log.info("Procesando migración asíncrona - txpCodigo: {}, año: {}, messageId: {}", 
                     message.getTxpCodigo(), message.getAnio(), message.getMessageId());
