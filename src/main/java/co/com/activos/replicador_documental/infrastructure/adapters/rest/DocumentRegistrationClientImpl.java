@@ -36,7 +36,7 @@ public class DocumentRegistrationClientImpl implements DocumentRegistrationClien
     @Override
     public DocumentRegistrationResponse registerDocument(DocumentRegistrationRequest request) {
         try {
-            log.info("Iniciando registro de documento con ID: {}", request.getDocumentId());
+            // log.info("Iniciando registro de documento con ID: {}", request.getDocumentId()); // Comentado para velocidad
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
@@ -76,7 +76,7 @@ public class DocumentRegistrationClientImpl implements DocumentRegistrationClien
             );
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                log.info("Documento registrado exitosamente con ID: {}", request.getDocumentId());
+                // log.info("Documento registrado exitosamente con ID: {}", request.getDocumentId()); // Comentado para velocidad
                 return response.getBody();
             } else {
                 log.error("Error al registrar el documento. Código de estado: {}", response.getStatusCodeValue());
