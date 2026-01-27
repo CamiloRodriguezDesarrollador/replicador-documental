@@ -29,32 +29,44 @@ public class SoapClientManualImpl implements SoapClientAdapter {
 
     @Override
     public SolicitarArchivoResponse solicitarArchivo(String docId) {
-        log.info("Descargando documento ID: {} de AZDigital (consumo manual)", docId);
+        log.info("Iniciando descarga de documento ID: {} mediante IP Estática", docId);
 
         try {
-            // Construir el XML SOAP manualmente
             String soapRequest = buildSoapRequest(docId);
-            
-            String fullEndpoint = endpoint + "SolicitarArchivo";
-            
+
+            // La URL debe ser exactamente:
+            // https://activos.analitica.com.co/AZDigital_Pruebas/WebServices/SOAP/
+            String fullEndpoint = endpoint;
+
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.TEXT_XML);
-            headers.set("SOAPAction", "urn:/#SolicitarArchivo");
-            
+
+            // Ajuste 1: Especificar charset UTF-8 (Vital para evitar el 403 en algunos IIS/Apache)
+            headers.set("Content-Type", "text/xml;charset=UTF-8");
+
+            // Ajuste 2: SOAPAction. En Node funciona porque la librería lo extrae del WSDL.
+            // Si el valor del namespace no funciona, prueba dejándolo como "" (comillas vacías).
+            headers.set("SOAPAction", "http://www.analitica.com.co/AZDigital/xsds/SolicitarArchivo");
+
+            // Ajuste 3: User-Agent idéntico a una herramienta de testing conocida
+            headers.set("User-Agent", "PostmanRuntime/7.29.2");
+            headers.set("Accept", "*/*");
+
             HttpEntity<String> entity = new HttpEntity<>(soapRequest, headers);
-            
-            log.debug("Enviando request SOAP manual a: {}", fullEndpoint);
-            log.debug("Request SOAP: {}", soapRequest);
-            
+
+            log.debug("Enviando POST a Endpoint: {}", fullEndpoint);
+
+            // Usamos postForEntity para capturar el código de estado en caso de error
             String response = restTemplate.postForObject(fullEndpoint, entity, String.class);
-            
-            log.debug("Response SOAP: {}", response);
-            
-            // Parsear la respuesta manualmente
+
             return parseSoapResponse(response);
-            
+
+        } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
+            log.error("ERROR 403: El servidor externo rechazó la conexión.");
+            log.error("Cuerpo de la respuesta del servidor: {}", e.getResponseBodyAsString());
+            log.error("Verifica que la IP Estática del Cloud NAT sea: [Tu IP Pública]");
+            throw e;
         } catch (Exception e) {
-            log.error("Error al obtener documento {}: {}", docId, e.getMessage());
+            log.error("Error inesperado en comunicación SOAP: {}", e.getMessage());
             throw e;
         }
     }
