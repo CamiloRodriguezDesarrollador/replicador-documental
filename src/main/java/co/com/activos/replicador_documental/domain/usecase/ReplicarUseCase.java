@@ -6,7 +6,7 @@ import co.com.activos.replicador_documental.infrastructure.adapters.BigQueryAdap
 import co.com.activos.replicador_documental.infrastructure.adapters.rest.DocumentRegistrationClient;
 import co.com.activos.replicador_documental.infrastructure.adapters.rest.model.DocumentRegistrationRequest;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.BatchSoapClientAdapter;
-import co.com.activos.replicador_documental.infrastructure.adapters.soap.SoapClientAdapter;
+import co.com.activos.replicador_documental.infrastructure.adapters.soap.SoapClientManualImpl;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoRequest;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
 
     private final ParamRepository paramRepository;
     private final AzDigitalRepository azDigitalRepository;
-    private final SoapClientAdapter soapClientAdapter;
+    private final SoapClientManualImpl soapClientManual;
     private final BatchSoapClientAdapter batchSoapClientAdapter;
     private final DocumentRegistrationClient documentRegistrationClient;
     private final BigQueryAdapter bigQueryAdapter;
@@ -232,65 +232,62 @@ public class ReplicarUseCase implements UseCase<Long, String> {
             return;
         }
         
-        log.info("Procesando {} documentos de la carpeta {} en modo batch", codigosCliente.size(), param.getCodigo());
+        log.info("Procesando {} documentos de la carpeta {} con SOAP manual", codigosCliente.size(), param.getCodigo());
         
-        // Procesar en batches optimizados con SOAP
-        batchSoapClientAdapter.procesarDocumentosEnBatches(
-            codigosCliente,
-            (codigoCliente, soapResponse) -> {
-                try {
-                    // Buscar el AzDigital correspondiente
-                    AzDigital azDigital = todosLosAzDigitales.stream()
-                            .filter(az -> az.getCodigoCli().equals(codigoCliente))
-                            .findFirst()
-                            .orElseThrow();
-                    
-                    // Procesar documento
-                    DocumentRegistrationRequest request = crearDocumentRegistrationRequest(azDigital, soapResponse, param);
-                    documentRegistrationClient.registerDocument(request);
-                    
-                    // Extraer tipo y número de documento para el log
+        // Procesar documentos individualmente con SOAP manual
+        for (String codigoCliente : codigosCliente) {
+            try {
+                // Buscar el AzDigital correspondiente
+                AzDigital azDigital = todosLosAzDigitales.stream()
+                        .filter(az -> az.getCodigoCli().equals(codigoCliente))
+                        .findFirst()
+                        .orElseThrow();
+                
+                // Usar SOAP manual para descargar el archivo
+                SolicitarArchivoResponse soapResponse = soapClientManual.solicitarArchivo(codigoCliente);
+                
+                // Procesar documento
+                DocumentRegistrationRequest request = crearDocumentRegistrationRequest(azDigital, soapResponse, param);
+                documentRegistrationClient.registerDocument(request);
+                
+                // Extraer tipo y número de documento para el log
+                DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
+                
+                // Log de éxito usando el adaptador con datos correctos
+                bigQueryAdapter.logSuccess(azDigital, 
+                        Collections.singletonList(azDigital.getCodigoCli()), 
+                        txpCodigoStr, executionId, 
+                        docParams.getTipoDocTrabajador(), // Tipo de documento real
+                        docParams.getDocumentoTrabajador()); // Cédula real
+                
+                documentosMigrados.incrementAndGet();
+                
+            } catch (Exception e) {
+                log.error("Error procesando documento {}: {}", codigoCliente, e.getMessage());
+                
+                // Para el log de error, necesitamos el AzDigital
+                AzDigital azDigital = todosLosAzDigitales.stream()
+                        .filter(az -> az.getCodigoCli().equals(codigoCliente))
+                        .findFirst()
+                        .orElse(null);
+                
+                if (azDigital != null) {
                     DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
                     
-                    // Log de éxito usando el adaptador con datos correctos
-                    bigQueryAdapter.logSuccess(azDigital, 
-                            Collections.singletonList(azDigital.getCodigoCli()), 
-                            txpCodigoStr, executionId, 
+                    bigQueryAdapter.logError(azDigital, e.getMessage(), txpCodigoStr, executionId, 
                             docParams.getTipoDocTrabajador(), // Tipo de documento real
                             docParams.getDocumentoTrabajador()); // Cédula real
-                    
-                    documentosMigrados.incrementAndGet();
-                    
-                } catch (Exception e) {
-                    log.error("Error procesando documento {}: {}", codigoCliente, e.getMessage());
-                    
-                    // Para el log de error, necesitamos el AzDigital
-                    AzDigital azDigital = todosLosAzDigitales.stream()
-                            .filter(az -> az.getCodigoCli().equals(codigoCliente))
-                            .findFirst()
-                            .orElse(null);
-                    
-                    if (azDigital != null) {
-                        DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
-                        
-                        bigQueryAdapter.logError(azDigital, e.getMessage(), txpCodigoStr, executionId, 
-                                docParams.getTipoDocTrabajador(), // Tipo de documento real
-                                docParams.getDocumentoTrabajador()); // Cédula real
-                    }
-                    
-                    documentosFallidos.incrementAndGet();
                 }
-            },
-            25 // Batch size reducido para menor carga
-        );
+                
+                documentosFallidos.incrementAndGet();
+            }
+        }
     }
     
     private void procesarDocumento(AzDigital azDigital, TaxonomiaParam param, String txpCodigoStr, long executionId,
                                  AtomicLong documentosMigrados, AtomicLong documentosFallidos) {
         try {
-            SolicitarArchivoResponse archivoResponse = soapClientAdapter.solicitarArchivo(
-                    new SolicitarArchivoRequest(azDigital.getCodigoCli())
-            );
+            SolicitarArchivoResponse archivoResponse = soapClientManual.solicitarArchivo(azDigital.getCodigoCli());
             DocumentRegistrationRequest request = crearDocumentRegistrationRequest(azDigital, archivoResponse, param);
             documentRegistrationClient.registerDocument(request);
             
