@@ -29,7 +29,7 @@ public class SoapClientManualImpl implements SoapClientAdapter {
 
     @Override
     public SolicitarArchivoResponse solicitarArchivo(String docId) {
-        log.info("Iniciando descarga de documento ID: {} mediante IP Estática", docId);
+        // log.info("Iniciando descarga de documento ID: {} mediante IP Estática", docId); // Comentado para velocidad
 
         try {
             String soapRequest = buildSoapRequest(docId);
@@ -53,20 +53,20 @@ public class SoapClientManualImpl implements SoapClientAdapter {
 
             HttpEntity<String> entity = new HttpEntity<>(soapRequest, headers);
 
-            log.debug("Enviando POST a Endpoint: {}", fullEndpoint);
+            // log.debug("Enviando POST a Endpoint: {}", fullEndpoint); // Comentado para velocidad
 
             // Usamos postForEntity para capturar el código de estado en caso de error
             String response = restTemplate.postForObject(fullEndpoint, entity, String.class);
             
-            log.info("Response SOAP recibida: {}", response);
-            log.info("Longitud de respuesta: {} caracteres", response != null ? response.length() : 0);
+            // log.info("Response SOAP recibida: {}", response); // Comentado para velocidad
+            // log.info("Longitud de respuesta: {} caracteres", response != null ? response.length() : 0); // Comentado para velocidad
 
             SolicitarArchivoResponse result = parseSoapResponse(response);
-            log.info("Resultado del parsing - Archivo: {}", result.getArchivo() != null ? "OK" : "NULL");
-            if (result.getArchivo() != null) {
-                log.info("Nombre archivo: {}", result.getArchivo().getNombre());
-                log.info("Contenido presente: {}", result.getArchivo().getContenido() != null ? "SI" : "NO");
-            }
+            // log.info("Resultado del parsing - Archivo: {}", result.getArchivo() != null ? "OK" : "NULL"); // Comentado para velocidad
+            // if (result.getArchivo() != null) {
+            //     log.info("Nombre archivo: {}", result.getArchivo().getNombre()); // Comentado para velocidad
+            //     log.info("Contenido presente: {}", result.getArchivo().getContenido() != null ? "SI" : "NO"); // Comentado para velocidad
+            // }
             
             return result;
 
@@ -96,10 +96,10 @@ public class SoapClientManualImpl implements SoapClientAdapter {
         SolicitarArchivoResponse result = new SolicitarArchivoResponse();
         
         try {
-            log.debug("Iniciando parsing de respuesta SOAP");
+            // log.debug("Iniciando parsing de respuesta SOAP"); // Comentado para velocidad
             
             if (response == null || response.trim().isEmpty()) {
-                log.warn("Respuesta SOAP es nula o vacía");
+                // log.warn("Respuesta SOAP es nula o vacía"); // Comentado para velocidad
                 return result;
             }
             
@@ -125,14 +125,14 @@ public class SoapClientManualImpl implements SoapClientAdapter {
                     if (endIndex > startIndex && tagEndIndex > startIndex) {
                         entregarXml = response.substring(startIndex, endIndex);
                         elementFound = element;
-                        log.info("Elemento encontrado: {}", element);
+                        // log.info("Elemento encontrado: {}", element); // Comentado para velocidad
                         break;
                     }
                 }
             }
             
             if (entregarXml != null) {
-                log.debug("XML de EntregarArchivo extraído: {}", entregarXml.substring(0, Math.min(200, entregarXml.length())));
+                // log.debug("XML de EntregarArchivo extraído: {}", entregarXml.substring(0, Math.min(200, entregarXml.length()))); // Comentado para velocidad
                 
                 // Extraer atributos directamente del elemento EntregarArchivo
                 String id = extractXmlAttribute(entregarXml, "Id");
@@ -143,27 +143,27 @@ public class SoapClientManualImpl implements SoapClientAdapter {
                 // Extraer el contenido del elemento Archivo anidado
                 String contenido = extractXmlContent(entregarXml, "Archivo");
                 
-                log.info("ID extraído: {}", id);
-                log.info("Nombre extraído: {}", nombre);
-                log.info("TipoMime extraído: {}", tipoMime);
-                log.info("Codificación extraída: {}", codificacion);
-                log.info("Contenido extraído (longitud): {}", contenido != null ? contenido.length() : 0);
+                // log.info("ID extraído: {}", id); // Comentado para velocidad
+                // log.info("Nombre extraído: {}", nombre); // Comentado para velocidad
+                // log.info("TipoMime extraído: {}", tipoMime); // Comentado para velocidad
+                // log.info("Codificación extraída: {}", codificacion); // Comentado para velocidad
+                // log.info("Contenido extraído (longitud): {}", contenido != null ? contenido.length() : 0); // Comentado para velocidad
                 
                 SolicitarArchivoResponse.ArchivoData archivoData = new SolicitarArchivoResponse.ArchivoData();
                 archivoData.setNombre(nombre);
                 archivoData.setContenido(contenido);
                 result.setArchivo(archivoData);
                 
-                log.info("Archivo parseado exitosamente desde atributos");
+                // log.info("Archivo parseado exitosamente desde atributos"); // Comentado para velocidad
             } else {
-                log.warn("No se encontró ningún elemento de archivo en la respuesta");
-                log.info("=== RESPUESTA SOAP COMPLETA ===");
-                log.info(response);
-                log.info("=== FIN RESPUESTA SOAP ===");
+                // log.warn("No se encontró ningún elemento de archivo en la respuesta"); // Comentado para velocidad
+                // log.info("=== RESPUESTA SOAP COMPLETA ==="); // Comentado para velocidad
+                // log.info(response); // Comentado para velocidad
+                // log.info("=== FIN RESPUESTA SOAP ==="); // Comentado para velocidad
             }
         } catch (Exception e) {
-            log.error("Error parseando respuesta SOAP: {}", e.getMessage(), e);
-            log.debug("Respuesta que causó error: {}", response);
+            log.error("Error parseando respuesta SOAP: {}", e.getMessage()); // Mantener solo error crítico
+            // log.debug("Respuesta que causó error: {}", response); // Comentado para velocidad
             throw new RuntimeException("Error parseando respuesta SOAP", e);
         }
         

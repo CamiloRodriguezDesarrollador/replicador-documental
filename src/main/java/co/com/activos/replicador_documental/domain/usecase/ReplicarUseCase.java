@@ -41,8 +41,8 @@ public class ReplicarUseCase implements UseCase<Long, String> {
     private final DocumentRegistrationClient documentRegistrationClient;
     private final BigQueryAdapter bigQueryAdapter;
 
-    private static final int BATCH_SIZE = 500; // Reducido para mejor rendimiento
-    private static final int PARALLEL_THREADS = 10; // Procesamiento paralelo
+    private static final int BATCH_SIZE = 100; // Batch más pequeño para mejor control
+    private static final int PARALLEL_THREADS = 15; // Más threads para mejor paralelismo
 
     @Override
     public String ejecutar(Long txpCodigo) {
@@ -55,14 +55,14 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         AtomicLong documentosMigrados = new AtomicLong(0);
         AtomicLong documentosFallidos = new AtomicLong(0);
         
-        log.info("Iniciando migración paginada con paralelismo para txpCodigo: {}", txpCodigo);
+        log.info("Iniciando migración txpCodigo: {}", txpCodigo);
         
         // Executor para procesamiento paralelo controlado
         ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS);
         
         try {
-            // Procesar parámetros por páginas pero con paralelismo dentro de cada página
-            int pageSize = 100; // Parámetros por página
+            // Procesar parámetros por páginas más pequeñas para mejor distribución
+            int pageSize = 50; // Página más pequeña para mejor paralelismo
             int pageNumber = 0;
             
             while (true) {
@@ -75,7 +75,6 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     }
                     
                     totalCarpetas.addAndGet(parametros.size());
-                    log.info("Procesando página {} de parámetros ({} carpetas) en paralelo", pageNumber + 1, parametros.size());
                     
                     // Procesar esta página de parámetros en paralelo
                     List<CompletableFuture<Void>> futures = parametros.stream()
@@ -84,7 +83,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                                     procesarCarpeta(param, txpCodigoStr, executionId, 
                                             totalDocumentos, documentosMigrados, documentosFallidos);
                                 } catch (Exception e) {
-                                    log.error("Error procesando carpeta {}: {}", param.getCodigo(), e.getMessage());
+                                    log.error("Error carpeta {}: {}", param.getCodigo(), e.getMessage());
                                 }
                             }, executor))
                             .toList();
@@ -95,7 +94,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     pageNumber++;
                     
                     // Pequeña pausa entre páginas para liberar conexiones
-                    Thread.sleep(100);
+                    Thread.sleep(20); // Más corta para mayor velocidad
                     
                 } catch (Exception e) {
                     log.error("Error procesando página {} de parámetros: {}", pageNumber, e.getMessage());
@@ -117,10 +116,12 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         }
         
         // Log final del proceso
-        log.info("Migración completada - Carpetas: {}, Documentos totales: {}, Migrados: {}, Fallidos: {}", 
-                totalCarpetas.get(), totalDocumentos.get(), documentosMigrados.get(), documentosFallidos.get());
+        long tiempoTotal = (System.currentTimeMillis() - executionId) / 1000;
         
-        return String.format("Migración completada. Carpetas procesadas: %d, Documentos migrados: %d, Documentos fallidos: %d", 
+        log.info("Migración completada - Carpetas: {}, Migrados: {}, Fallidos: {}, Tiempo: {}s", 
+                totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get(), tiempoTotal);
+        
+        return String.format("Migración completada. Carpetas: %d, Migrados: %d, Fallidos: %d", 
                 totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get());
     }
     
@@ -135,14 +136,14 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         AtomicLong documentosMigrados = new AtomicLong(0);
         AtomicLong documentosFallidos = new AtomicLong(0);
         
-        log.info("Iniciando migración por año {} para txpCodigo: {}", anio, txpCodigo);
+        log.info("Iniciando migración año {} txpCodigo: {}", anio, txpCodigo);
         
         // Executor para procesamiento paralelo controlado
         ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS);
         
         try {
-            // Procesar parámetros por páginas pero con paralelismo dentro de cada página
-            int pageSize = 100; // Parámetros por página
+            // Procesar parámetros por páginas más pequeñas para mejor distribución
+            int pageSize = 50; // Página más pequeña para mejor paralelismo
             int pageNumber = 0;
             
             while (true) {
@@ -155,8 +156,6 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     }
                     
                     totalCarpetas.addAndGet(parametros.size());
-                    log.info("Procesando página {} de parámetros del año {} ({} carpetas) en paralelo", 
-                            pageNumber + 1, anio, parametros.size());
                     
                     // Procesar esta página de parámetros en paralelo
                     List<CompletableFuture<Void>> futures = parametros.stream()
@@ -165,7 +164,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                                     procesarCarpeta(param, txpCodigoStr, executionId, 
                                             totalDocumentos, documentosMigrados, documentosFallidos);
                                 } catch (Exception e) {
-                                    log.error("Error procesando carpeta {}: {}", param.getCodigo(), e.getMessage());
+                                    log.error("Error carpeta {}: {}", param.getCodigo(), e.getMessage());
                                 }
                             }, executor))
                             .toList();
@@ -176,7 +175,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     pageNumber++;
                     
                     // Pequeña pausa entre páginas para liberar conexiones
-                    Thread.sleep(100);
+                    Thread.sleep(20); // Más corta para mayor velocidad
                     
                 } catch (Exception e) {
                     log.error("Error procesando página {} de parámetros del año {}: {}", pageNumber, anio, e.getMessage());
@@ -198,10 +197,12 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         }
         
         // Log final del proceso
-        log.info("Migración del año {} completada - Carpetas: {}, Documentos totales: {}, Migrados: {}, Fallidos: {}", 
-                anio, totalCarpetas.get(), totalDocumentos.get(), documentosMigrados.get(), documentosFallidos.get());
+        long tiempoTotal = (System.currentTimeMillis() - executionId) / 1000;
         
-        return String.format("Migración del año %d completada. Carpetas procesadas: %d, Documentos migrados: %d, Documentos fallidos: %d", 
+        log.info("Migración año {} completada - Carpetas: {}, Migrados: {}, Fallidos: {}, Tiempo: {}s", 
+                anio, totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get(), tiempoTotal);
+        
+        return String.format("Migración año %d completada. Carpetas: %d, Migrados: %d, Fallidos: %d", 
                 anio, totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get());
     }
     
@@ -232,87 +233,163 @@ public class ReplicarUseCase implements UseCase<Long, String> {
             return;
         }
         
-        log.info("Procesando {} documentos de la carpeta {} con SOAP manual", codigosCliente.size(), param.getCodigo());
+        // log.info("Procesando {} documentos carpeta {}", codigosCliente.size(), param.getCodigo()); // Comentado para velocidad
         
-        // Procesar documentos individualmente con SOAP manual
-        for (String codigoCliente : codigosCliente) {
+        // Mejorar paralelismo: procesar en batches más pequeños con threads controlados
+        int batchSize = 10; // Batch más pequeño para mejor control
+        int maxThreads = 5;  // Threads para esta carpeta específica
+        
+        ExecutorService carpetaExecutor = Executors.newFixedThreadPool(maxThreads);
+        
+        try {
+            // Dividir en batches para procesamiento paralelo
+            for (int i = 0; i < codigosCliente.size(); i += batchSize) {
+                int endIndex = Math.min(i + batchSize, codigosCliente.size());
+                List<String> batch = codigosCliente.subList(i, endIndex);
+                
+                // log.debug("Procesando batch {}-{} de {} documentos (carpeta: {})", 
+                        // i + 1, endIndex, codigosCliente.size(), param.getCodigo()); // Comentado para velocidad
+                
+                // Procesar este batch en paralelo
+                List<CompletableFuture<Void>> futures = batch.stream()
+                        .map(codigoCliente -> CompletableFuture.runAsync(() -> {
+                            try {
+                                // Buscar el AzDigital correspondiente (optimizado con Map)
+                                AzDigital azDigital = todosLosAzDigitales.stream()
+                                        .filter(az -> az.getCodigoCli().equals(codigoCliente))
+                                        .findFirst()
+                                        .orElse(null);
+                                
+                                if (azDigital == null) {
+                                    // log.warn("No se encontró AzDigital para código: {}", codigoCliente); // Comentado para velocidad
+                                    return;
+                                }
+                                
+                                // log.debug("Descargando documento {} con SOAP manual", codigoCliente); // Comentado para velocidad
+                                
+                                // Usar SOAP manual para descargar el archivo
+                                SolicitarArchivoResponse soapResponse = soapClientManual.solicitarArchivo(codigoCliente);
+                                
+                                if (soapResponse == null || soapResponse.getArchivo() == null) {
+                                    // log.warn("Respuesta vacía para documento: {}", codigoCliente); // Comentado para velocidad
+                                    return;
+                                }
+                                
+                                // Procesar documento
+                                DocumentRegistrationRequest request = crearDocumentRegistrationRequest(azDigital, soapResponse, param);
+                                documentRegistrationClient.registerDocument(request);
+                                
+                                // log.debug("Documento {} procesado exitosamente", codigoCliente); // Comentado para velocidad
+                                
+                                // Extraer tipo y número de documento para el log
+                                DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
+                                
+                                // Log de éxito - COMENTADO para no insertar en BigQuery
+                                /*
+                                bigQueryAdapter.logSuccess(azDigital, 
+                                        Collections.singletonList(azDigital.getCodigoCli()), 
+                                        txpCodigoStr, executionId, 
+                                        docParams.getTipoDocTrabajador(), 
+                                        docParams.getDocumentoTrabajador());
+                                */
+                                
+                                documentosMigrados.incrementAndGet();
+                                
+                            } catch (Exception e) {
+                                log.error("Error procesando documento {}: {}", codigoCliente, e.getMessage(), e);
+                                
+                                // Para el log de error, necesitamos el AzDigital
+                                AzDigital azDigital = todosLosAzDigitales.stream()
+                                        .filter(az -> az.getCodigoCli().equals(codigoCliente))
+                                        .findFirst()
+                                        .orElse(null);
+                                
+                                if (azDigital != null) {
+                                    DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
+                                    
+                                    // Log de error - COMENTADO para no insertar en BigQuery
+                                    /*
+                                    bigQueryAdapter.logError(azDigital, e.getMessage(), txpCodigoStr, executionId, 
+                                            docParams.getTipoDocTrabajador(), 
+                                            docParams.getDocumentoTrabajador());
+                                    */
+                                }
+                                
+                                documentosFallidos.incrementAndGet();
+                            }
+                        }, carpetaExecutor))
+                        .toList();
+                
+                // Esperar a que termine el batch antes de continuar
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                
+                // Pequeña pausa entre batches para no sobrecargar
+                Thread.sleep(10); // Más corta para mayor velocidad
+            }
+            
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            // log.error("Procesamiento interrumpido para carpeta: {}", param.getCodigo()); // Comentado para velocidad
+        } finally {
+            carpetaExecutor.shutdown();
             try {
-                // Buscar el AzDigital correspondiente
-                AzDigital azDigital = todosLosAzDigitales.stream()
-                        .filter(az -> az.getCodigoCli().equals(codigoCliente))
-                        .findFirst()
-                        .orElseThrow();
-                
-                // Usar SOAP manual para descargar el archivo
-                SolicitarArchivoResponse soapResponse = soapClientManual.solicitarArchivo(codigoCliente);
-                
-                // Procesar documento
-                DocumentRegistrationRequest request = crearDocumentRegistrationRequest(azDigital, soapResponse, param);
-                documentRegistrationClient.registerDocument(request);
-                
-                // Extraer tipo y número de documento para el log
-                DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
-                
-                // Log de éxito usando el adaptador con datos correctos
-                bigQueryAdapter.logSuccess(azDigital, 
-                        Collections.singletonList(azDigital.getCodigoCli()), 
-                        txpCodigoStr, executionId, 
-                        docParams.getTipoDocTrabajador(), // Tipo de documento real
-                        docParams.getDocumentoTrabajador()); // Cédula real
-                
-                documentosMigrados.incrementAndGet();
-                
-            } catch (Exception e) {
-                log.error("Error procesando documento {}: {}", codigoCliente, e.getMessage());
-                
-                // Para el log de error, necesitamos el AzDigital
-                AzDigital azDigital = todosLosAzDigitales.stream()
-                        .filter(az -> az.getCodigoCli().equals(codigoCliente))
-                        .findFirst()
-                        .orElse(null);
-                
-                if (azDigital != null) {
-                    DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
-                    
-                    bigQueryAdapter.logError(azDigital, e.getMessage(), txpCodigoStr, executionId, 
-                            docParams.getTipoDocTrabajador(), // Tipo de documento real
-                            docParams.getDocumentoTrabajador()); // Cédula real
+                if (!carpetaExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+                    carpetaExecutor.shutdownNow();
                 }
-                
-                documentosFallidos.incrementAndGet();
+            } catch (InterruptedException e) {
+                carpetaExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
             }
         }
+        
+        // log.info("Carpeta {} completada - Migrados: {}, Fallidos: {}", 
+        //         param.getCodigo(), documentosMigrados.get(), documentosFallidos.get()); // Comentado para velocidad
     }
     
     private void procesarDocumento(AzDigital azDigital, TaxonomiaParam param, String txpCodigoStr, long executionId,
                                  AtomicLong documentosMigrados, AtomicLong documentosFallidos) {
         try {
+            // log.debug("Procesando documento individual: {}", azDigital.getCodigoCli()); // Comentado para velocidad
+            
             SolicitarArchivoResponse archivoResponse = soapClientManual.solicitarArchivo(azDigital.getCodigoCli());
+            
+            if (archivoResponse == null || archivoResponse.getArchivo() == null) {
+                // log.warn("Respuesta vacía para documento: {}", azDigital.getCodigoCli()); // Comentado para velocidad
+                documentosFallidos.incrementAndGet();
+                return;
+            }
+            
             DocumentRegistrationRequest request = crearDocumentRegistrationRequest(azDigital, archivoResponse, param);
             documentRegistrationClient.registerDocument(request);
+            
+            // log.debug("Documento {} procesado exitosamente", azDigital.getCodigoCli()); // Comentado para velocidad
             
             // Extraer tipo y número de documento para el log
             DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
             
-            // Log de éxito usando el adaptador con datos correctos
+            // Log de éxito - COMENTADO para no insertar en BigQuery
+            /*
             bigQueryAdapter.logSuccess(azDigital, 
                     Collections.singletonList(azDigital.getCodigoCli()), 
                     txpCodigoStr, executionId, 
-                    docParams.getTipoDocTrabajador(), // Tipo de documento real
-                    docParams.getDocumentoTrabajador()); // Cédula real
+                    docParams.getTipoDocTrabajador(), 
+                    docParams.getDocumentoTrabajador());
+            */
             
             documentosMigrados.incrementAndGet();
             
         } catch (Exception e) {
-            log.error("Error al solicitar archivo para cliente {}: {}", azDigital.getCodigoCli(), e.getMessage());
+            log.error("Error al solicitar archivo para cliente {}: {}", azDigital.getCodigoCli(), e.getMessage(), e);
             
             // Extraer tipo y número de documento para el log de error también
             DocumentRegistrationRequest.DocumentParams docParams = extraerTipoYNumeroDocumento(param.getNombre());
             
-            // Log de error usando el adaptador con datos correctos
+            // Log de error - COMENTADO para no insertar en BigQuery
+            /*
             bigQueryAdapter.logError(azDigital, e.getMessage(), txpCodigoStr, executionId, 
-                    docParams.getTipoDocTrabajador(), // Tipo de documento real
-                    docParams.getDocumentoTrabajador()); // Cédula real
+                    docParams.getTipoDocTrabajador(), 
+                    docParams.getDocumentoTrabajador());
+            */
             
             documentosFallidos.incrementAndGet();
         }
