@@ -257,7 +257,11 @@ public class ReplicarUseCase implements UseCase<Long, String> {
             return;
         }
         
-        // log.info("Procesando {} documentos carpeta {}", codigosCliente.size(), param.getCodigo()); // Comentado para velocidad
+        // Mostrar total de documentos a procesar
+        long currentTotal = totalDocumentos.get();
+        if (currentTotal > 0 && currentTotal % 1000 == 0) {
+            log.info("Total documentos descubiertos: {}", currentTotal);
+        }
         
         // Procesamiento secuencial por carpeta para evitar thread starvation
         // Usar batches pequeños pero sin executor anidado
@@ -295,9 +299,21 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     
                     documentosMigrados.incrementAndGet();
                     
+                    // Log de progreso cada 100 documentos
+                    long current = documentosMigrados.get() + documentosFallidos.get();
+                    if (current % 100 == 0) {
+                        log.info("Progreso: {}/{}", current, totalDocumentos.get());
+                    }
+                    
                 } catch (Exception e) {
                     log.error("Error procesando documento {}: {}", codigoCliente, e.getMessage());
                     documentosFallidos.incrementAndGet();
+                    
+                    // Log de progreso cada 100 documentos (incluyendo fallidos)
+                    long current = documentosMigrados.get() + documentosFallidos.get();
+                    if (current % 100 == 0) {
+                        log.info("Progreso: {}/{}", current, totalDocumentos.get());
+                    }
                 }
             }
             
