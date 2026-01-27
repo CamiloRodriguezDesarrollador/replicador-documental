@@ -47,14 +47,12 @@ public interface TaxonomiaParamRepository extends JpaRepository<TaxonomiaParamDa
         @Param("pageSize") int pageSize
     );
     
-    // Métodos para migración por año usando AUD_FECHA
+    // Métodos para migración por año - optimizados sin JOIN
     @Query(value = """
-        SELECT DISTINCT tp.TXP_CODIGO, tp.TXP_CODIGO_REF, tp.TXP_DESCRIPCION 
-        FROM ADM.TAXONOMIA_PARAM tp
-        JOIN ADM.DATA_ERP_AZ dea ON tp.TXP_CODIGO = dea.TXP_CODIGO
+        SELECT TXP_CODIGO, TXP_CODIGO_REF, TXP_DESCRIPCION 
+        FROM ADM.TAXONOMIA_PARAM tp 
         WHERE tp.TXP_CODIGO_REF = :txpCodigoRef
-        AND EXTRACT(YEAR FROM dea.AUD_FECHA) = :anio
-        ORDER BY tp.TXP_CODIGO
+        ORDER BY TXP_CODIGO
         """, nativeQuery = true)
     List<TaxonomiaParamData> buscarPorTipoFlujoYAnio(
         @Param("txpCodigoRef") Long txpCodigoRef, 
@@ -62,12 +60,11 @@ public interface TaxonomiaParamRepository extends JpaRepository<TaxonomiaParamDa
     );
     
     @Query(value = """
-        SELECT DISTINCT tp.TXP_CODIGO, tp.TXP_CODIGO_REF, tp.TXP_DESCRIPCION 
-        FROM ADM.TAXONOMIA_PARAM tp
-        JOIN ADM.DATA_ERP_AZ dea ON tp.TXP_CODIGO = dea.TXP_CODIGO
+        SELECT TXP_CODIGO, TXP_CODIGO_REF, TXP_DESCRIPCION 
+        FROM ADM.TAXONOMIA_PARAM tp 
         WHERE tp.TXP_CODIGO_REF = :txpCodigoRef
-        AND EXTRACT(YEAR FROM dea.AUD_FECHA) = :anio
-        ORDER BY tp.TXP_CODIGO
+        AND EXTRACT(YEAR FROM tp.AUD_FECHA) = :anio
+        ORDER BY TXP_CODIGO
         OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY
         """, nativeQuery = true)
     List<TaxonomiaParamData> buscarPorTipoFlujoYAnioPaginado(
