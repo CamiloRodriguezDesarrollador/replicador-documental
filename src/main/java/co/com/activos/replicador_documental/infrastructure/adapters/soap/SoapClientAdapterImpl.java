@@ -39,11 +39,16 @@ public class SoapClientAdapterImpl extends WebServiceGatewaySupport  implements 
 
     @Override
     public SolicitarArchivoResponse solicitarArchivo(SolicitarArchivoRequest solicitarArchivoRequest) {
+        return solicitarArchivo(solicitarArchivoRequest.getId());
+    }
+
+    @Override
+    public SolicitarArchivoResponse solicitarArchivo(String docId) {
         SolicitarArchivoRequest request = SolicitarArchivoRequest.builder()
-                .id(solicitarArchivoRequest.getId())
+                .id(docId)
                 .build();
 
-        log.info("Descargando documento ID: {} de AZDigital", solicitarArchivoRequest.getId());
+        log.info("Descargando documento ID: {} de AZDigital", docId);
 
         try {
             String fullEndpoint = endpoint + "BuscarArchivo";
@@ -61,7 +66,7 @@ public class SoapClientAdapterImpl extends WebServiceGatewaySupport  implements 
                         }
                     });
         } catch (Exception e) {
-            log.error("Error al obtener documento {}: {}", solicitarArchivoRequest.getId(), e.getMessage());
+            log.error("Error al obtener documento {}: {}", docId, e.getMessage());
             throw e;
         }
     }

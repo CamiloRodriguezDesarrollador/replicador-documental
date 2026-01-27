@@ -35,7 +35,7 @@ public class SoapClientManualImpl implements SoapClientAdapter {
             // Construir el XML SOAP manualmente
             String soapRequest = buildSoapRequest(docId);
             
-            String fullEndpoint = endpoint + "ServiciosAZDigital.php";
+            String fullEndpoint = endpoint + "SolicitarArchivo";
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.TEXT_XML);
