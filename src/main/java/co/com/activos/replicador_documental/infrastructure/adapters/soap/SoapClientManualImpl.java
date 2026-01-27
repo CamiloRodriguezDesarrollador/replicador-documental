@@ -103,23 +103,27 @@ public class SoapClientManualImpl implements SoapClientAdapter {
                 return result;
             }
             
-            // Buscar diferentes posibles namespaces y elementos
+            // Buscar el elemento EntregarArchivo con namespace az:
             String[] possibleElements = {
-                "<xsds:Archivo>", "<az:Archivo>", "<Archivo>",
-                "<xsds:EntregarArchivo>", "<az:EntregarArchivo>", "<EntregarArchivo>"
+                "<az:EntregarArchivo",
+                "<xsds:EntregarArchivo", 
+                "<EntregarArchivo"
             };
             
-            String archivoXml = null;
+            String entregarXml = null;
             String elementFound = null;
             
             for (String element : possibleElements) {
                 if (response.contains(element)) {
-                    String closeElement = element.replace("<", "</");
                     int startIndex = response.indexOf(element);
+                    // Encontrar el cierre del tag de apertura >
+                    int tagEndIndex = response.indexOf(">", startIndex);
+                    // Encontrar el cierre del elemento completo
+                    String closeElement = element.replace("<", "</");
                     int endIndex = response.indexOf(closeElement) + closeElement.length();
                     
-                    if (endIndex > startIndex) {
-                        archivoXml = response.substring(startIndex, endIndex);
+                    if (endIndex > startIndex && tagEndIndex > startIndex) {
+                        entregarXml = response.substring(startIndex, endIndex);
                         elementFound = element;
                         log.info("Elemento encontrado: {}", element);
                         break;
@@ -127,14 +131,22 @@ public class SoapClientManualImpl implements SoapClientAdapter {
                 }
             }
             
-            if (archivoXml != null) {
-                log.debug("XML de archivo extraído: {}", archivoXml);
+            if (entregarXml != null) {
+                log.debug("XML de EntregarArchivo extraído: {}", entregarXml.substring(0, Math.min(200, entregarXml.length())));
                 
-                // Extraer nombre y contenido con diferentes namespaces
-                String nombre = extractXmlValue(archivoXml, "Nombre");
-                String contenido = extractXmlValue(archivoXml, "Contenido");
+                // Extraer atributos directamente del elemento EntregarArchivo
+                String id = extractXmlAttribute(entregarXml, "Id");
+                String nombre = extractXmlAttribute(entregarXml, "Nombre");
+                String tipoMime = extractXmlAttribute(entregarXml, "TipoMime");
+                String codificacion = extractXmlAttribute(entregarXml, "Codificacion");
                 
+                // Extraer el contenido del elemento Archivo anidado
+                String contenido = extractXmlContent(entregarXml, "Archivo");
+                
+                log.info("ID extraído: {}", id);
                 log.info("Nombre extraído: {}", nombre);
+                log.info("TipoMime extraído: {}", tipoMime);
+                log.info("Codificación extraída: {}", codificacion);
                 log.info("Contenido extraído (longitud): {}", contenido != null ? contenido.length() : 0);
                 
                 SolicitarArchivoResponse.ArchivoData archivoData = new SolicitarArchivoResponse.ArchivoData();
@@ -142,7 +154,7 @@ public class SoapClientManualImpl implements SoapClientAdapter {
                 archivoData.setContenido(contenido);
                 result.setArchivo(archivoData);
                 
-                log.info("Archivo parseado exitosamente");
+                log.info("Archivo parseado exitosamente desde atributos");
             } else {
                 log.warn("No se encontró ningún elemento de archivo en la respuesta");
                 log.info("=== RESPUESTA SOAP COMPLETA ===");
@@ -180,6 +192,42 @@ public class SoapClientManualImpl implements SoapClientAdapter {
         }
         
         log.debug("No se encontró el tag {} con ningún namespace", tagName);
+        return null;
+    }
+    
+    private String extractXmlAttribute(String xml, String attributeName) {
+        // Buscar atributo en formato: nombre="valor"
+        String pattern = attributeName + "=\"";
+        int startIndex = xml.indexOf(pattern);
+        if (startIndex == -1) return null;
+        
+        startIndex += pattern.length();
+        int endIndex = xml.indexOf("\"", startIndex);
+        
+        if (endIndex == -1) return null;
+        
+        return xml.substring(startIndex, endIndex);
+    }
+    
+    private String extractXmlContent(String xml, String tagName) {
+        // Probar diferentes namespaces para el contenido
+        String[] possibleNamespaces = {"xsds:", "az:", ""};
+        
+        for (String namespace : possibleNamespaces) {
+            String openTag = "<" + namespace + tagName + ">";
+            String closeTag = "</" + namespace + tagName + ">";
+            
+            int startIndex = xml.indexOf(openTag);
+            if (startIndex != -1) {
+                startIndex += openTag.length();
+                int endIndex = xml.indexOf(closeTag, startIndex);
+                
+                if (endIndex != -1) {
+                    return xml.substring(startIndex, endIndex);
+                }
+            }
+        }
+        
         return null;
     }
 }
