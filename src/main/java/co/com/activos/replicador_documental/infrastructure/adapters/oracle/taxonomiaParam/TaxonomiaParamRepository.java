@@ -47,11 +47,12 @@ public interface TaxonomiaParamRepository extends JpaRepository<TaxonomiaParamDa
         @Param("pageSize") int pageSize
     );
     
-    // Métodos para migración por año - optimizados sin JOIN
+    // Métodos para migración por año usando AUD_FECHA
     @Query(value = """
         SELECT TXP_CODIGO, TXP_CODIGO_REF, TXP_DESCRIPCION 
         FROM ADM.TAXONOMIA_PARAM tp 
         WHERE tp.TXP_CODIGO_REF = :txpCodigoRef
+        AND EXTRACT(YEAR FROM tp.AUD_FECHA) = :anio
         ORDER BY TXP_CODIGO
         """, nativeQuery = true)
     List<TaxonomiaParamData> buscarPorTipoFlujoYAnio(
