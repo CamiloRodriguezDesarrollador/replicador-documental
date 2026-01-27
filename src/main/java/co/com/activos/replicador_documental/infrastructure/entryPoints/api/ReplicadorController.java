@@ -8,10 +8,10 @@ import co.com.activos.replicador_documental.infrastructure.adapters.rest.model.D
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.SoapClientAdapter;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoRequest;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoResponse;
-import com.activos.gcp.pubsub.service.PubSubService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import co.com.activos.replicador_documental.domain.model.MigrationMessage;
+import co.com.activos.replicador_documental.infrastructure.adapters.pubsub.ManualPubSubPublisher;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +28,7 @@ class ReplicadorController {
     private final ReplicarUseCase replicarUseCase;
     private final SoapClientAdapter soapClientAdapter;
     private final DocumentRegistrationClient documentRegistrationClient;
-    private final PubSubService pubSubService;
+    private final ManualPubSubPublisher manualPubSubPublisher;
     private final ObjectMapper objectMapper;
 
     @GetMapping("/ping")
@@ -52,7 +52,7 @@ class ReplicadorController {
             String payload = objectMapper.writeValueAsString(message);
             
             // Publicar en Pub/Sub
-             pubSubService.publish("migration-topic", payload);
+             manualPubSubPublisher.publish("migration-topic", message);
             
             return ResponseEntity.ok("Proceso iniciado exitosamente.");
             

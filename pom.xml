@@ -132,11 +132,11 @@
         </dependency>
 
 
-        <!-- Activos Pub/Sub Starter (versión ligera) -->
+        <!-- Google Cloud Pub/Sub Official -->
         <dependency>
-            <groupId>com.activos.gcp</groupId>
-            <artifactId>activos-pubsub-starter</artifactId>
-            <version>0.0.4-SNAPSHOT</version>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-pubsub</artifactId>
+            <version>1.140.1</version>
         </dependency>
 
     </dependencies>
