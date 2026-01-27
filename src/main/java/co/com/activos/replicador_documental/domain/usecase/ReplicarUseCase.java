@@ -57,7 +57,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         AtomicLong documentosMigrados = new AtomicLong(0);
         AtomicLong documentosFallidos = new AtomicLong(0);
         
-        log.info("Iniciando migración txpCodigo: {}", txpCodigo);
+        // log.info("Iniciando migración txpCodigo: {}", txpCodigo); // Comentado para velocidad
         
         // Executor para procesamiento paralelo controlado
         ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS);
@@ -72,7 +72,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     List<TaxonomiaParam> parametros = paramRepository.listarPorTipoFlujo(txpCodigo, pageNumber, pageSize);
                     
                     if (parametros.isEmpty()) {
-                        log.info("No hay más parámetros. Fin de la migración.");
+                        // log.info("No hay más parámetros. Fin de la migración."); // Comentado para velocidad
                         break;
                     }
                     
@@ -113,7 +113,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
             }
             
             if (pageNumber >= MAX_PAGES) {
-                log.warn("Se alcanzó el límite máximo de páginas ({}). Deteniendo procesamiento.", MAX_PAGES);
+                // log.warn("Se alcanzó el límite máximo de páginas ({}). Deteniendo procesamiento.", MAX_PAGES); // Comentado para velocidad
             }
             
         } finally {
@@ -131,8 +131,8 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         // Log final del proceso
         long tiempoTotal = (System.currentTimeMillis() - executionId) / 1000;
         
-        log.info("Migración completada - Carpetas: {}, Migrados: {}, Fallidos: {}, Tiempo: {}s", 
-                totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get(), tiempoTotal);
+        // log.info("Migración completada - Carpetas: {}, Migrados: {}, Fallidos: {}, Tiempo: {}s", 
+        //         totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get(), tiempoTotal); // Comentado para velocidad
         
         return String.format("Migración completada. Carpetas: %d, Migrados: %d, Fallidos: %d", 
                 totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get());
@@ -149,7 +149,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         AtomicLong documentosMigrados = new AtomicLong(0);
         AtomicLong documentosFallidos = new AtomicLong(0);
         
-        log.info("Iniciando migración año {} txpCodigo: {}", anio, txpCodigo);
+        // log.info("Iniciando migración año {} txpCodigo: {}", anio, txpCodigo); // Comentado para velocidad
         
         // Executor para procesamiento paralelo controlado
         ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS);
@@ -164,7 +164,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     List<TaxonomiaParam> parametros = paramRepository.listarPorTipoFlujoYAnio(txpCodigo, anio, pageNumber, pageSize);
                     
                     if (parametros.isEmpty()) {
-                        log.info("No hay más parámetros para el año {}. Fin de la migración.", anio);
+                        // log.info("No hay más parámetros para el año {}. Fin de la migración.", anio); // Comentado para velocidad
                         break;
                     }
                     
@@ -205,7 +205,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
             }
             
             if (pageNumber >= MAX_PAGES) {
-                log.warn("Se alcanzó el límite máximo de páginas ({}). Deteniendo procesamiento del año {}.", MAX_PAGES, anio);
+                // log.warn("Se alcanzó el límite máximo de páginas ({}). Deteniendo procesamiento del año {}.", MAX_PAGES, anio); // Comentado para velocidad
             }
             
         } finally {
@@ -223,12 +223,14 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         // Log final del proceso
         long tiempoTotal = (System.currentTimeMillis() - executionId) / 1000;
         
-        log.info("Migración año {} completada - Carpetas: {}, Migrados: {}, Fallidos: {}, Tiempo: {}s", 
-                anio, totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get(), tiempoTotal);
+        // log.info("Migración año {} completada - Carpetas: {}, Migrados: {}, Fallidos: {}, Tiempo: {}s", 
+        //         anio, totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get(), tiempoTotal); // Comentado para velocidad
         
         return String.format("Migración año %d completada. Carpetas: %d, Migrados: %d, Fallidos: %d", 
                 anio, totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get());
     }
+    
+    // Método de conteo eliminado - ahora el total se va descubriendo gradualmente durante el procesamiento
     
     private void procesarCarpeta(TaxonomiaParam param, String txpCodigoStr, long executionId,
                                 AtomicLong totalDocumentos, AtomicLong documentosMigrados, AtomicLong documentosFallidos) throws InterruptedException {
@@ -302,7 +304,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     // Log de progreso cada 100 documentos
                     long current = documentosMigrados.get() + documentosFallidos.get();
                     if (current % 100 == 0) {
-                        log.info("Progreso: {}/{}", current, totalDocumentos.get());
+                        log.info("Progreso: Docs {}/{} - Carpetas: {}", current, totalDocumentos.get(), totalCarpetas.get());
                     }
                     
                 } catch (Exception e) {
@@ -312,7 +314,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     // Log de progreso cada 100 documentos (incluyendo fallidos)
                     long current = documentosMigrados.get() + documentosFallidos.get();
                     if (current % 100 == 0) {
-                        log.info("Progreso: {}/{}", current, totalDocumentos.get());
+                        log.info("Progreso: Docs {}/{} - Carpetas: {}", current, totalDocumentos.get(), totalCarpetas.get());
                     }
                 }
             }
