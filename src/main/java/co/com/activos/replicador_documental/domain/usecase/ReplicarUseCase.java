@@ -231,7 +231,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
     }
     
     private void procesarCarpeta(TaxonomiaParam param, String txpCodigoStr, long executionId,
-                                AtomicLong totalDocumentos, AtomicLong documentosMigrados, AtomicLong documentosFallidos) {
+                                AtomicLong totalDocumentos, AtomicLong documentosMigrados, AtomicLong documentosFallidos) throws InterruptedException {
         
         // Extraer todos los códigos de cliente de esta carpeta
         List<String> codigosCliente = new ArrayList<>();
