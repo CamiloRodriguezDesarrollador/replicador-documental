@@ -49,6 +49,16 @@ public class AdapterTaxonomiaRepository implements ParamRepository {
                 .toList();
     }
 
+    @Override
+    public Long contarCarpetasPorTipoFlujo(Long txpCodigo) {
+        return repository.contarCarpetasPorTipoFlujo(txpCodigo);
+    }
+    
+    @Override
+    public Long contarCarpetasPorTipoFlujoYAnio(Long txpCodigo, int anio) {
+        return repository.contarCarpetasPorTipoFlujoYAnio(txpCodigo, anio);
+    }
+
     private TaxonomiaParam toDomain(TaxonomiaParamData data) {
         return TaxonomiaParam.builder()
                 .codigo(data.getCodigo())

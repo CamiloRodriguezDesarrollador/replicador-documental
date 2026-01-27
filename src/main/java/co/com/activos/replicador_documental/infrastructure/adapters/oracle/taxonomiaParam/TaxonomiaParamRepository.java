@@ -16,6 +16,20 @@ public interface TaxonomiaParamRepository extends JpaRepository<TaxonomiaParamDa
         """, nativeQuery = true)
     List<TaxonomiaParamData> listarPorTipoFlujo(@Param("txpCodigoRef") Long txpCodigoRef);
 
+    // Método para contar carpetas totales
+    @Query(value = """
+        SELECT count(*) FROM ADM.TAXONOMIA_PARAM tp WHERE tp.TXP_CODIGO_REF = :txpCodigoRef
+        """, nativeQuery = true)
+    Long contarCarpetasPorTipoFlujo(@Param("txpCodigoRef") Long txpCodigoRef);
+
+    // Método para contar carpetas por año
+    @Query(value = """
+        SELECT count(*) FROM ADM.TAXONOMIA_PARAM tp 
+        WHERE tp.TXP_CODIGO_REF = :txpCodigoRef
+        AND EXTRACT(YEAR FROM tp.AUD_FECHA) = :anio
+        """, nativeQuery = true)
+    Long contarCarpetasPorTipoFlujoYAnio(@Param("txpCodigoRef") Long txpCodigoRef, @Param("anio") int anio);
+
     // Método con paginación (mantenido para compatibilidad)
     @Query(value = """
         SELECT  TXP_CODIGO, TXP_CODIGO_REF, TXP_DESCRIPCION FROM ADM.TAXONOMIA_PARAM tp WHERE tp.TXP_CODIGO_REF = :txpCodigoRef

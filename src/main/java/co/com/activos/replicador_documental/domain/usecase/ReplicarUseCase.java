@@ -57,7 +57,9 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         AtomicLong documentosMigrados = new AtomicLong(0);
         AtomicLong documentosFallidos = new AtomicLong(0);
         
-        // log.info("Iniciando migración txpCodigo: {}", txpCodigo); // Comentado para velocidad
+        // Validar cantidad total de carpetas
+        Long totalCarpetasBD = paramRepository.contarCarpetasPorTipoFlujo(txpCodigo);
+        log.info("VALIDACIÓN - Total carpetas en BD para txpCodigo {}: {}", txpCodigo, totalCarpetasBD);
         
         // Executor para procesamiento paralelo controlado
         ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS);
@@ -149,7 +151,9 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         AtomicLong documentosMigrados = new AtomicLong(0);
         AtomicLong documentosFallidos = new AtomicLong(0);
         
-        // log.info("Iniciando migración año {} txpCodigo: {}", anio, txpCodigo); // Comentado para velocidad
+        // Validar cantidad total de carpetas por año
+        Long totalCarpetasBD = paramRepository.contarCarpetasPorTipoFlujoYAnio(txpCodigo, anio);
+        log.info("VALIDACIÓN - Total carpetas en BD para txpCodigo {} año {}: {}", txpCodigo, anio, totalCarpetasBD);
         
         // Executor para procesamiento paralelo controlado
         ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS);
