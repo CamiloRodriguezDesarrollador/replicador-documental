@@ -15,7 +15,6 @@ import org.springframework.ws.soap.client.core.SoapActionCallback;
 import java.io.IOException;
 import javax.xml.transform.TransformerException;
 
-@Component
 @Slf4j
 public class SoapClientAdapterImpl extends WebServiceGatewaySupport  implements SoapClientAdapter{
 
@@ -47,9 +46,9 @@ public class SoapClientAdapterImpl extends WebServiceGatewaySupport  implements 
         log.info("Descargando documento ID: {} de AZDigital", solicitarArchivoRequest.getId());
 
         try {
-            String fullEndpoint = endpoint + "SolicitarArchivo";
+            String fullEndpoint = endpoint + "BuscarArchivo";
             return (SolicitarArchivoResponse) getWebServiceTemplate()
-                    .marshalSendAndReceive(fullEndpoint, request, new SoapActionCallback(SOAP_ACTION) {
+                    .marshalSendAndReceive(fullEndpoint, request, new SoapActionCallback("urn:/#BuscarArchivo") {
                         @Override
                         public void doWithMessage(WebServiceMessage message) throws IOException {
                             super.doWithMessage(message);

@@ -13,4 +13,11 @@ public interface SoapClientAdapter {
      * @return Respuesta del servicio
      */
     SolicitarArchivoResponse solicitarArchivo(SolicitarArchivoRequest request);
+    
+    /**
+     * Solicita un archivo mediante el servicio SOAP (consumo manual)
+     * @param docId ID del documento a solicitar
+     * @return Respuesta del servicio
+     */
+    SolicitarArchivoResponse solicitarArchivo(String docId);
 }
