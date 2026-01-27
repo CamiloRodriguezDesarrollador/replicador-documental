@@ -167,6 +167,21 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         // Executor para procesamiento paralelo controlado
         ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS);
         
+        // Log de supervivencia cada 30 segundos
+        Thread survivalLogger = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    Thread.sleep(30000); // 30 segundos
+                    log.info("SUPERVIVENCIA - Proceso activo - Procesadas: {} carpetas, Docs: {}/{}", 
+                            totalCarpetas.get(), documentosMigrados.get(), totalDocumentos.get());
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
+        });
+        survivalLogger.setDaemon(true);
+        survivalLogger.start();
+        
         try {
             // Procesar parámetros por páginas más pequeñas para mejor distribución
             int pageSize = 50; // Página más pequeña para mejor paralelismo
@@ -174,7 +189,10 @@ public class ReplicarUseCase implements UseCase<Long, String> {
             
             while (pageNumber < MAX_PAGES) {
                 try {
+                    long queryStart = System.currentTimeMillis();
                     List<TaxonomiaParam> parametros = paramRepository.listarPorTipoFlujoYAnio(message.getTxpCodigo(), message.getAnio(), pageNumber, pageSize);
+                    long queryTime = System.currentTimeMillis() - queryStart;
+                    log.info("BD QUERY - Página {}: {} carpetas en {}ms", pageNumber, parametros.size(), queryTime);
                     
                     if (parametros.isEmpty()) {
                         // log.info("No hay más parámetros para el año {}. Fin de la migración.", message.getAnio()); // Comentado para velocidad
@@ -195,12 +213,14 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                             }, executor))
                             .toList();
                     
-                    // Esperar a que termine toda la página con timeout de 5 minutos
+                    // Esperar a que termine toda la página con timeout de 15 minutos
                     try {
+                        log.info("Procesando página {} con {} carpetas...", pageNumber, parametros.size());
                         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                                .get(5, TimeUnit.MINUTES);
+                                .get(15, TimeUnit.MINUTES);
+                        log.info("Página {} completada. Total procesadas: {}", pageNumber, totalCarpetas.get());
                     } catch (java.util.concurrent.TimeoutException e) {
-                        log.error("Timeout procesando página {} (año {}). Continuando con la siguiente.", pageNumber, message.getAnio());
+                        log.error("Timeout procesando página {} (año {}). Continuando con la siguiente. Completadas: {}", pageNumber, message.getAnio(), totalCarpetas.get());
                         // Cancelar futures que no terminaron
                         futures.forEach(f -> f.cancel(true));
                     }
