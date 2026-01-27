@@ -9,6 +9,9 @@ import co.com.activos.replicador_documental.infrastructure.adapters.soap.BatchSo
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.SoapClientManualImpl;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoRequest;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoResponse;
+import com.activos.gcp.pubsub.annotation.Listener;
+import co.com.activos.replicador_documental.infrastructure.adapters.pubsub.model.MigrationMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +44,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
     private final BatchSoapClientAdapter batchSoapClientAdapter;
     private final DocumentRegistrationClient documentRegistrationClient;
     private final BigQueryAdapter bigQueryAdapter;
+    private final ObjectMapper objectMapper;
 
     private static final int BATCH_SIZE = 100; // Batch más pequeño para mejor control
     private static final int PARALLEL_THREADS = 8; // Reducido para evitar thread starvation
@@ -139,11 +143,20 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         return String.format("Migración completada. Carpetas: %d, Migrados: %d, Fallidos: %d", 
                 totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get());
     }
-    
-    // Nuevo método para migración por año
-    public String ejecutarPorAnio(Long txpCodigo, int anio) {
-        long executionId = System.currentTimeMillis();
-        String txpCodigoStr = txpCodigo.toString();
+
+
+    @Listener("migration_sb")
+    public String ejecutarPorAnio(String payload) {
+        try {
+            // Deserializar el mensaje JSON
+            MigrationMessage message = objectMapper.readValue(payload, MigrationMessage.class);
+            
+            log.info("Procesando migración asíncrona - txpCodigo: {}, año: {}, messageId: {}", 
+                    message.getTxpCodigo(), message.getAnio(), message.getMessageId());
+            
+            long executionId = System.currentTimeMillis();
+            String txpCodigoStr = message.getTxpCodigo().toString();
+            int anio = message.getAnio();
         
         // Contadores para tracking
         AtomicLong totalCarpetas = new AtomicLong(0);
@@ -152,8 +165,8 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         AtomicLong documentosFallidos = new AtomicLong(0);
         
         // Validar cantidad total de carpetas por año
-        Long totalCarpetasBD = paramRepository.contarCarpetasPorTipoFlujoYAnio(txpCodigo, anio);
-        log.info("VALIDACIÓN - Total carpetas en BD para txpCodigo {} año {}: {}", txpCodigo, anio, totalCarpetasBD);
+        Long totalCarpetasBD = paramRepository.contarCarpetasPorTipoFlujoYAnio(message.getTxpCodigo(), message.getAnio());
+        log.info("VALIDACIÓN - Total carpetas en BD para txpCodigo {} año {}: {}", message.getTxpCodigo(), message.getAnio(), totalCarpetasBD);
         
         // Executor para procesamiento paralelo controlado
         ExecutorService executor = Executors.newFixedThreadPool(PARALLEL_THREADS);
@@ -165,10 +178,10 @@ public class ReplicarUseCase implements UseCase<Long, String> {
             
             while (pageNumber < MAX_PAGES) {
                 try {
-                    List<TaxonomiaParam> parametros = paramRepository.listarPorTipoFlujoYAnio(txpCodigo, anio, pageNumber, pageSize);
+                    List<TaxonomiaParam> parametros = paramRepository.listarPorTipoFlujoYAnio(message.getTxpCodigo(), message.getAnio(), pageNumber, pageSize);
                     
                     if (parametros.isEmpty()) {
-                        // log.info("No hay más parámetros para el año {}. Fin de la migración.", anio); // Comentado para velocidad
+                        // log.info("No hay más parámetros para el año {}. Fin de la migración.", message.getAnio()); // Comentado para velocidad
                         break;
                     }
                     
@@ -191,7 +204,7 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                                 .get(5, TimeUnit.MINUTES);
                     } catch (java.util.concurrent.TimeoutException e) {
-                        log.error("Timeout procesando página {} (año {}). Continuando con la siguiente.", pageNumber, anio);
+                        log.error("Timeout procesando página {} (año {}). Continuando con la siguiente.", pageNumber, message.getAnio());
                         // Cancelar futures que no terminaron
                         futures.forEach(f -> f.cancel(true));
                     }
@@ -202,14 +215,14 @@ public class ReplicarUseCase implements UseCase<Long, String> {
                     Thread.sleep(10); // Más corta para mayor velocidad
                     
                 } catch (Exception e) {
-                    log.error("Error procesando página {} de parámetros del año {}: {}", pageNumber, anio, e.getMessage());
+                    log.error("Error procesando página {} de parámetros del año {}: {}", pageNumber, message.getAnio(), e.getMessage());
                     pageNumber++;
                     continue;
                 }
             }
             
             if (pageNumber >= MAX_PAGES) {
-                // log.warn("Se alcanzó el límite máximo de páginas ({}). Deteniendo procesamiento del año {}.", MAX_PAGES, anio); // Comentado para velocidad
+                // log.warn("Se alcanzó el límite máximo de páginas ({}). Deteniendo procesamiento del año {}.", MAX_PAGES, message.getAnio()); // Comentado para velocidad
             }
             
         } finally {
@@ -228,10 +241,15 @@ public class ReplicarUseCase implements UseCase<Long, String> {
         long tiempoTotal = (System.currentTimeMillis() - executionId) / 1000;
         
         // log.info("Migración año {} completada - Carpetas: {}, Migrados: {}, Fallidos: {}, Tiempo: {}s", 
-        //         anio, totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get(), tiempoTotal); // Comentado para velocidad
+        //         message.getAnio(), totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get(), tiempoTotal); // Comentado para velocidad
         
         return String.format("Migración año %d completada. Carpetas: %d, Migrados: %d, Fallidos: %d", 
-                anio, totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get());
+                message.getAnio(), totalCarpetas.get(), documentosMigrados.get(), documentosFallidos.get());
+                
+        } catch (Exception e) {
+            log.error("Error procesando migración asíncrona: {}", e.getMessage(), e);
+            return "Error en migración asíncrona: " + e.getMessage();
+        }
     }
     
     // Método de conteo eliminado - ahora el total se va descubriendo gradualmente durante el procesamiento

@@ -8,8 +8,10 @@ import co.com.activos.replicador_documental.infrastructure.adapters.rest.model.D
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.SoapClientAdapter;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoRequest;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoResponse;
+import com.activos.gcp.pubsub.service.PubSubService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import co.com.activos.replicador_documental.infrastructure.adapters.pubsub.model.MigrationMessage;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,10 +28,39 @@ class ReplicadorController {
     private final ReplicarUseCase replicarUseCase;
     private final SoapClientAdapter soapClientAdapter;
     private final DocumentRegistrationClient documentRegistrationClient;
+    private final PubSubService pubSubService;
+    private final ObjectMapper objectMapper;
 
     @GetMapping("/ping")
     public ResponseEntity<String> ping() {
         return ResponseEntity.ok("pong");
+    }
+
+
+    @PostMapping("/{txpCodigo}/anio/{anio}/async")
+    public ResponseEntity<String> ejecutarReplicacionAsync(@PathVariable Long txpCodigo, @PathVariable int anio) {
+        try {
+            // Crear mensaje de migración
+            MigrationMessage message = MigrationMessage.builder()
+                    .txpCodigo(txpCodigo)
+                    .anio(anio)
+                    .messageId(java.util.UUID.randomUUID().toString())
+                    .status("PENDING")
+                    .build();
+            
+            // Convertir a JSON
+            String payload = objectMapper.writeValueAsString(message);
+            
+            // Publicar en Pub/Sub
+             pubSubService.publish("migration-topic", payload);
+            
+            return ResponseEntity.ok("Proceso iniciado exitosamente.");
+            
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.badRequest().body("Error creando el mensaje: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error publicando en Pub/Sub: " + e.getMessage());
+        }
     }
 
     @GetMapping("/bhv/{txpCodigo}")
@@ -44,18 +75,18 @@ class ReplicadorController {
     }
 
 
-    @GetMapping("/bhv/{txpCodigo}/anio/{anio}")
-    public CompletableFuture<ResponseEntity<String>> replicarBhvPorAnio(@PathVariable Long txpCodigo, @PathVariable int anio) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                String resultado = replicarUseCase.ejecutarPorAnio(txpCodigo, anio);
-                return ResponseEntity.ok(resultado);
-            } catch (Exception e) {
-                return ResponseEntity.internalServerError()
-                        .body("Error al replicar carpetas del año " + anio + ": " + e.getMessage());
-            }
-        });
-    }
+//    @GetMapping("/bhv/{txpCodigo}/anio/{anio}")
+//    public CompletableFuture<ResponseEntity<String>> replicarBhvPorAnio(@PathVariable Long txpCodigo, @PathVariable int anio) {
+//        return CompletableFuture.supplyAsync(() -> {
+//            try {
+//                String resultado = replicarUseCase.ejecutarPorAnio(txpCodigo, anio);
+//                return ResponseEntity.ok(resultado);
+//            } catch (Exception e) {
+//                return ResponseEntity.internalServerError()
+//                        .body("Error al replicar carpetas del año " + anio + ": " + e.getMessage());
+//            }
+//        });
+//    }
 
 
     @GetMapping("/solicitar/{id}")
