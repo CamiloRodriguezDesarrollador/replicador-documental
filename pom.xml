@@ -131,18 +131,12 @@
             <artifactId>spring-test</artifactId>
         </dependency>
 
-        <!-- BigQuery -->
-        <dependency>
-            <groupId>com.activos.gcp</groupId>
-            <artifactId>activos-bigquery-starter</artifactId>
-            <version>0.0.3</version>
-        </dependency>
 
-        <!-- Activos Pub/Sub Starter -->
+        <!-- Activos Pub/Sub Starter (versión ligera) -->
         <dependency>
             <groupId>com.activos.gcp</groupId>
             <artifactId>activos-pubsub-starter</artifactId>
-            <version>0.0.3-SNAPSHOT</version>
+            <version>0.0.4-SNAPSHOT</version>
         </dependency>
 
     </dependencies>

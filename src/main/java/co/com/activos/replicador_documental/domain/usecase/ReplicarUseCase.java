@@ -2,12 +2,10 @@ package co.com.activos.replicador_documental.domain.usecase;
 
 import co.com.activos.replicador_documental.domain.model.*;
 import co.com.activos.replicador_documental.helpers.UseCase;
-import co.com.activos.replicador_documental.infrastructure.adapters.BigQueryAdapter;
 import co.com.activos.replicador_documental.infrastructure.adapters.rest.DocumentRegistrationClient;
 import co.com.activos.replicador_documental.infrastructure.adapters.rest.model.DocumentRegistrationRequest;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.BatchSoapClientAdapter;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.SoapClientManualImpl;
-import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoRequest;
 import co.com.activos.replicador_documental.infrastructure.adapters.soap.model.SolicitarArchivoResponse;
 import com.activos.gcp.pubsub.annotation.Listener;
 import co.com.activos.replicador_documental.infrastructure.adapters.pubsub.model.MigrationMessage;
@@ -43,7 +41,6 @@ public class ReplicarUseCase implements UseCase<Long, String> {
     private final SoapClientManualImpl soapClientManual;
     private final BatchSoapClientAdapter batchSoapClientAdapter;
     private final DocumentRegistrationClient documentRegistrationClient;
-    private final BigQueryAdapter bigQueryAdapter;
     private final ObjectMapper objectMapper;
 
     private static final int BATCH_SIZE = 100; // Batch más pequeño para mejor control
