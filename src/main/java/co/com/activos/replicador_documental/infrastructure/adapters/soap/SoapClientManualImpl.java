@@ -57,8 +57,18 @@ public class SoapClientManualImpl implements SoapClientAdapter {
 
             // Usamos postForEntity para capturar el código de estado en caso de error
             String response = restTemplate.postForObject(fullEndpoint, entity, String.class);
+            
+            log.info("Response SOAP recibida: {}", response);
+            log.info("Longitud de respuesta: {} caracteres", response != null ? response.length() : 0);
 
-            return parseSoapResponse(response);
+            SolicitarArchivoResponse result = parseSoapResponse(response);
+            log.info("Resultado del parsing - Archivo: {}", result.getArchivo() != null ? "OK" : "NULL");
+            if (result.getArchivo() != null) {
+                log.info("Nombre archivo: {}", result.getArchivo().getNombre());
+                log.info("Contenido presente: {}", result.getArchivo().getContenido() != null ? "SI" : "NO");
+            }
+            
+            return result;
 
         } catch (org.springframework.web.client.HttpClientErrorException.Forbidden e) {
             log.error("ERROR 403: El servidor externo rechazó la conexión.");
@@ -83,32 +93,65 @@ public class SoapClientManualImpl implements SoapClientAdapter {
     }
 
     private SolicitarArchivoResponse parseSoapResponse(String response) {
-        // Implementar parsing manual de la respuesta SOAP
         SolicitarArchivoResponse result = new SolicitarArchivoResponse();
         
         try {
-            // Extraer el contenido del archivo de la respuesta SOAP
-            if (response.contains("<xsds:Archivo>") && response.contains("</xsds:Archivo>")) {
-                String archivoXml = response.substring(
-                    response.indexOf("<xsds:Archivo>"),
-                    response.indexOf("</xsds:Archivo>") + "</xsds:Archivo>".length()
-                );
+            log.debug("Iniciando parsing de respuesta SOAP");
+            
+            if (response == null || response.trim().isEmpty()) {
+                log.warn("Respuesta SOAP es nula o vacía");
+                return result;
+            }
+            
+            // Buscar diferentes posibles namespaces y elementos
+            String[] possibleElements = {
+                "<xsds:Archivo>", "<az:Archivo>", "<Archivo>",
+                "<xsds:EntregarArchivo>", "<az:EntregarArchivo>", "<EntregarArchivo>"
+            };
+            
+            String archivoXml = null;
+            String elementFound = null;
+            
+            for (String element : possibleElements) {
+                if (response.contains(element)) {
+                    String closeElement = element.replace("<", "</");
+                    int startIndex = response.indexOf(element);
+                    int endIndex = response.indexOf(closeElement) + closeElement.length();
+                    
+                    if (endIndex > startIndex) {
+                        archivoXml = response.substring(startIndex, endIndex);
+                        elementFound = element;
+                        log.info("Elemento encontrado: {}", element);
+                        break;
+                    }
+                }
+            }
+            
+            if (archivoXml != null) {
+                log.debug("XML de archivo extraído: {}", archivoXml);
                 
-                // Extraer nombre y contenido
+                // Extraer nombre y contenido con diferentes namespaces
                 String nombre = extractXmlValue(archivoXml, "Nombre");
                 String contenido = extractXmlValue(archivoXml, "Contenido");
+                
+                log.info("Nombre extraído: {}", nombre);
+                log.info("Contenido extraído (longitud): {}", contenido != null ? contenido.length() : 0);
                 
                 SolicitarArchivoResponse.ArchivoData archivoData = new SolicitarArchivoResponse.ArchivoData();
                 archivoData.setNombre(nombre);
                 archivoData.setContenido(contenido);
                 result.setArchivo(archivoData);
                 
-                log.info("Archivo obtenido exitosamente: {}", nombre);
+                log.info("Archivo parseado exitosamente");
             } else {
-                log.warn("No se encontró el elemento <xsds:Archivo> en la respuesta");
+                log.warn("No se encontró ningún elemento de archivo en la respuesta");
+                log.info("=== RESPUESTA SOAP COMPLETA ===");
+                log.info(response);
+                log.info("=== FIN RESPUESTA SOAP ===");
             }
         } catch (Exception e) {
-            log.error("Error parseando respuesta SOAP: {}", e.getMessage());
+            log.error("Error parseando respuesta SOAP: {}", e.getMessage(), e);
+            log.debug("Respuesta que causó error: {}", response);
             throw new RuntimeException("Error parseando respuesta SOAP", e);
         }
         
@@ -116,15 +159,27 @@ public class SoapClientManualImpl implements SoapClientAdapter {
     }
 
     private String extractXmlValue(String xml, String tagName) {
-        String openTag = "<xsds:" + tagName + ">";
-        String closeTag = "</xsds:" + tagName + ">";
+        // Probar diferentes namespaces
+        String[] possibleNamespaces = {"xsds:", "az:", ""};
         
-        int startIndex = xml.indexOf(openTag);
-        if (startIndex == -1) return null;
+        for (String namespace : possibleNamespaces) {
+            String openTag = "<" + namespace + tagName + ">";
+            String closeTag = "</" + namespace + tagName + ">";
+            
+            int startIndex = xml.indexOf(openTag);
+            if (startIndex != -1) {
+                startIndex += openTag.length();
+                int endIndex = xml.indexOf(closeTag, startIndex);
+                
+                if (endIndex != -1) {
+                    String value = xml.substring(startIndex, endIndex);
+                    log.debug("Valor extraído con namespace '{}': {}", namespace, value);
+                    return value;
+                }
+            }
+        }
         
-        startIndex += openTag.length();
-        int endIndex = xml.indexOf(closeTag, startIndex);
-        
-        return endIndex == -1 ? null : xml.substring(startIndex, endIndex);
+        log.debug("No se encontró el tag {} con ningún namespace", tagName);
+        return null;
     }
 }

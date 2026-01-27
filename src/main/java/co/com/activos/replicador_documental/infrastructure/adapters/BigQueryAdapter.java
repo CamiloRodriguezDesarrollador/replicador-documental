@@ -49,7 +49,7 @@ public class BigQueryAdapter implements MigrationLogRepository {
             rowContent.put("documentos_fallidos", migrationLog.getDocumentosFallidos());
             rowContent.put("status", migrationLog.getStatus());
             rowContent.put("error_message", migrationLog.getErrorMessage());
-            rowContent.put("fecha_migracion", migrationLog.getFechaMigracion().toString());
+            rowContent.put("fecha_migracion", migrationLog.getFechaMigracion().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME));
             rowContent.put("txp_codigo", migrationLog.getTxpCodigo());
             rowContent.put("execution_id", migrationLog.getExecutionId());
 
@@ -90,7 +90,7 @@ public class BigQueryAdapter implements MigrationLogRepository {
                 rowContent.put("documentos_fallidos", log.getDocumentosFallidos());
                 rowContent.put("status", log.getStatus());
                 rowContent.put("error_message", log.getErrorMessage());
-                rowContent.put("fecha_migracion", log.getFechaMigracion().toString());
+                rowContent.put("fecha_migracion", log.getFechaMigracion().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                 rowContent.put("txp_codigo", log.getTxpCodigo());
                 rowContent.put("execution_id", log.getExecutionId());
 
